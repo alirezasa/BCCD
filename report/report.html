@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>گزارش تمرین ۱ - CNN روی BCCD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 14mm 15mm 14mm 15mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Vazirmatn", "DejaVu Sans", sans-serif; font-size: 10.3pt; line-height: 1.75; color: #1b1b1b; margin: 0; background: #fff; }
+  h1 { font-size: 16pt; margin: 0 0 2px; }
+  h2 { font-size: 12pt; margin: 14px 0 4px; padding-bottom: 2px; border-bottom: 1.5px solid #2c5aa0; color: #1f3f73; }
+  p { margin: 4px 0; text-align: justify; }
+  ul { margin: 3px 0; padding-right: 18px; }
+  li { margin: 1px 0; text-align: justify; }
+  .meta { color: #555; font-size: 9.5pt; margin-bottom: 6px; }
+  .meta span { margin-left: 18px; }
+  table { border-collapse: collapse; width: 100%; margin: 5px 0; font-size: 9pt; line-height: 1.45; }
+  th, td { border: 1px solid #b9c3d3; padding: 2px 6px; text-align: center; }
+  th { background: #e8eef8; }
+  td.l { text-align: right; }
+  tr.blk td { background: #f6f8fc; }
+  .ltr { direction: ltr; unicode-bidi: embed; font-family: "DejaVu Sans Mono", monospace; font-size: 8.6pt; }
+  code { direction: ltr; unicode-bidi: embed; font-family: "DejaVu Sans Mono", monospace; font-size: 8.6pt; background: #f2f4f7; padding: 0 3px; border-radius: 3px; }
+  figure { margin: 6px 0; text-align: center; page-break-inside: avoid; }
+  figure img { max-width: 100%; }
+  figcaption { font-size: 8.8pt; color: #444; margin-top: 1px; }
+  .two { display: flex; gap: 10px; align-items: flex-start; }
+  .two > * { flex: 1; }
+  .kpi { display: flex; gap: 8px; margin: 6px 0; }
+  .kpi div { flex: 1; border: 1px solid #c9d4e6; border-radius: 6px; padding: 3px 6px; text-align: center; background: #f7f9fd; }
+  .kpi b { display: block; font-size: 13pt; color: #1f3f73; }
+  h2 { break-after: avoid; page-break-after: avoid; }
+  .two, table, ul { break-inside: avoid; page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<h1>تمرین ۱: طراحی و تحلیل شبکه عصبی کانولوشن برای طبقه‌بندی گلبول‌های سفید خون (BCCD)</h1>
+<div class="meta"><span>نام و نام خانوادگی: ............................</span><span>شماره دانشجویی: ....................</span><span>درس: یادگیری عمیق پیشرفته</span></div>
+
+<div class="kpi">
+  <div>دقت Test<b>98.0٪</b></div>
+  <div>Macro F1<b>0.980</b></div>
+  <div>بهترین Val Acc<b>97.3٪</b></div>
+  <div>پارامترها<b>424K</b></div>
+  <div>زمان آموزش (CPU)<b>~10 دقیقه</b></div>
+</div>
+
+<h2>۱. داده و پیش‌پردازش</h2>
+<ul>
+  <li><b>داده:</b> پوشه‌های <code>TRAIN</code> و <code>TEST</code> از <code>dataset2-master</code> (۱۲٬۴۴۴ تصویر، ۴ کلاس تقریباً متوازن) با هم ادغام و به نسبت
+    <b>۷۰٪ / ۱۵٪ / ۱۵٪</b> (۸۷۳۹ / ۱۸۵۲ / ۱۸۵۳ تصویر) تقسیم شدند.</li>
+  <li><b>جلوگیری از نشت داده:</b> این تصاویر از قبل Augment شده‌اند و از هر تصویر میکروسکوپی اصلی ده‌ها نسخه‌ی چرخیده/قرینه وجود دارد (۳۴۸ تصویر اصلی).
+    تقسیم به‌صورت <b>گروهی بر اساس تصویر اصلی</b> و طبقه‌بندی‌شده انجام شد تا هیچ نسخه‌ای از یک تصویر هم‌زمان در Train و Test نباشد؛
+    بنابراین دقت گزارش‌شده روی سلول‌هایی است که شبکه هرگز ندیده است.</li>
+  <li><b>تغییر اندازه و نرمال‌سازی:</b> تصاویر ۳۲۰×۲۴۰ دقیقاً به <b>۶۴×۶۴</b> تغییر اندازه داده شدند و مقادیر پیکسل ابتدا به [0, 1] و سپس به <b>[−1, 1]</b> نگاشت شدند.</li>
+  <li><b>افزایش داده (فقط Train):</b> چرخش تصادفی ±۲۰°، قرینه‌سازی افقی (و عمودی)، <code>RandomResizedCrop</code> با مقیاس ۰٫۸ تا ۱ و جابه‌جایی ۵٪،
+    و <code>ColorJitter</code> ملایم برای شبیه‌سازی تفاوت رنگ‌آمیزی لام‌ها.</li>
+</ul>
+
+<h2>۲. معماری شبکه (پیاده‌سازی از صفر با PyTorch)</h2>
+<p>چهار بلوک کانولوشن متوالی، هر بلوک شامل <code>Conv2d → BatchNorm2d → ReLU → MaxPool2d(2)</code>؛ سپس Global Average Pooling،
+دو لایه Fully Connected با Dropout، و لایه خروجی ۴ نورونی با تابع زیان <code>CrossEntropyLoss</code>.</p>
+<table>
+  <tr><th>بخش</th><th>لایه</th><th>سایز فیلتر / گام / Padding</th><th>کانال ورودی → خروجی</th><th>ابعاد خروجی (C×H×W)</th><th>پارامتر</th></tr>
+  <tr><td>ورودی</td><td>تصویر RGB</td><td>–</td><td>3</td><td class="ltr">3×64×64</td><td>–</td></tr>
+  <tr class="blk"><td rowspan="2">بلوک ۱</td><td>Conv2d + BN + ReLU</td><td class="ltr">5×5 / 1 / 2</td><td class="ltr">3 → 32</td><td class="ltr">32×64×64</td><td>2,464</td></tr>
+  <tr class="blk"><td>MaxPool2d</td><td class="ltr">2×2 / 2</td><td>32</td><td class="ltr">32×32×32</td><td>0</td></tr>
+  <tr><td rowspan="2">بلوک ۲</td><td>Conv2d + BN + ReLU</td><td class="ltr">3×3 / 1 / 1</td><td class="ltr">32 → 64</td><td class="ltr">64×32×32</td><td>18,560</td></tr>
+  <tr><td>MaxPool2d</td><td class="ltr">2×2 / 2</td><td>64</td><td class="ltr">64×16×16</td><td>0</td></tr>
+  <tr class="blk"><td rowspan="2">بلوک ۳</td><td>Conv2d + BN + ReLU</td><td class="ltr">3×3 / 1 / 1</td><td class="ltr">64 → 128</td><td class="ltr">128×16×16</td><td>73,984</td></tr>
+  <tr class="blk"><td>MaxPool2d</td><td class="ltr">2×2 / 2</td><td>128</td><td class="ltr">128×8×8</td><td>0</td></tr>
+  <tr><td rowspan="2">بلوک ۴</td><td>Conv2d + BN + ReLU</td><td class="ltr">3×3 / 1 / 1</td><td class="ltr">128 → 256</td><td class="ltr">256×8×8</td><td>295,424</td></tr>
+  <tr><td>MaxPool2d</td><td class="ltr">2×2 / 2</td><td>256</td><td class="ltr">256×4×4</td><td>0</td></tr>
+  <tr class="blk"><td rowspan="4">طبقه‌بند</td><td>Global AvgPool + Flatten</td><td class="ltr">4×4</td><td>256</td><td class="ltr">256</td><td>0</td></tr>
+  <tr class="blk"><td>Dropout(0.5) + Linear + ReLU</td><td>–</td><td class="ltr">256 → 128</td><td class="ltr">128</td><td>32,896</td></tr>
+  <tr class="blk"><td>Dropout(0.3) + Linear</td><td>–</td><td class="ltr">128 → 4</td><td class="ltr">4 (logits)</td><td>516</td></tr>
+  <tr class="blk"><td>Softmax (درون CrossEntropy)</td><td>–</td><td>4</td><td class="ltr">4</td><td>0</td></tr>
+  <tr><th colspan="5">مجموع پارامترهای قابل آموزش</th><th>423,844</th></tr>
+</table>
+<p>کانولوشن‌ها بدون bias هستند (bias در BatchNorm وجود دارد). فیلتر ۵×۵ در لایه اول میدان دید بزرگ‌تری برای یادگیری لبه و بافت فراهم می‌کند.
+استفاده از Global Average Pooling به‌جای Flatten کردن ۴۰۹۶ ویژگی، پارامترهای بخش FC را از حدود ۱٫۰۵ میلیون به ۳۳ هزار کاهش داد.</p>
+
+<h2>۳. آموزش و تنظیم فراپارامترها</h2>
+<p>بهینه‌ساز <b>Adam</b> با <code>lr = 0.001</code> و <code>weight_decay = 1e-4</code>، زمان‌بند <b>Cosine Annealing</b>، اندازه دسته <b>۶۴</b>، حداکثر <b>۱۵ اپوک</b>.
+وزن‌های مدلی که کمترین Loss اعتبارسنجی را داشت در <code>best_model.pt</code> ذخیره شد (<b>Model Checkpoint</b>) و <b>Early Stopping</b> با صبر ۵ اپوک فعال بود.</p>
+<table>
+  <tr><th>نسخه</th><th>تغییرات</th><th>بهترین Val Acc</th><th>Test Acc</th><th>مشاهده</th></tr>
+  <tr><td>۱ (پایه)</td><td class="l">ورودی [0,1]، Flatten → FC(256)، بدون زمان‌بند و ColorJitter</td><td>0.766</td><td>0.751</td><td class="l">Loss اعتبارسنجی بسیار ناپایدار (تا ۱۳٫۵)؛ توقف زودهنگام در اپوک ۱۰</td></tr>
+  <tr><td>۲</td><td class="l">+ ورودی [−1,1]، ColorJitter، قرینه عمودی، weight decay، Cosine LR</td><td>0.933</td><td>0.935</td><td class="l">آموزش پایدار شد</td></tr>
+  <tr><td><b>۳ (نهایی)</b></td><td class="l">+ Global Average Pooling به‌جای Flatten</td><td><b>0.973</b></td><td><b>0.980</b></td><td class="l">کمترین Loss اعتبارسنجی؛ بهترین مدل در اپوک ۱۵</td></tr>
+</table>
+<p>علت ناپایداری نسخه پایه این بود که Validation از تصاویر اصلی دیگری (با رنگ‌آمیزی و نور متفاوت) تشکیل شده و لایه FC بزرگ روی جزئیات تصاویر آموزش
+بیش‌برازش می‌کرد. ColorJitter این تفاوت دامنه را شبیه‌سازی می‌کند و GAP ظرفیت بخش FC را کاهش می‌دهد.</p>
+
+<h2>۴. نمودارهای آموزش و اعتبارسنجی</h2>
+<figure>
+  <img src="../outputs/training_curves.png" alt="Loss and accuracy curves">
+  <figcaption>شکل ۱ – Loss (چپ) و Accuracy (راست) داده‌های آموزش و اعتبارسنجی در هر اپوک؛ خط‌چین، اپوک ذخیره بهترین مدل است.</figcaption>
+</figure>
+<ul>
+  <li>Loss آموزش به‌طور یکنواخت از ۱٫۱۵ به ۰٫۱۳ کاهش یافت و دقت آموزش به ۹۴٫۷٪ رسید. Loss اعتبارسنجی در اپوک ۴ یک جهش موقت داشت
+    (نرخ یادگیری هنوز بالاست و آمار BatchNorm پایدار نشده)، اما با کاهش نرخ یادگیری توسط Cosine Annealing از اپوک ۶ به بعد هموار شد و به ۰٫۰۷۴ رسید.</li>
+  <li>دقت اعتبارسنجی کمی <b>بیشتر</b> از دقت آموزش است؛ چون روی داده آموزش Augmentation و Dropout فعال‌اند (آموزش سخت‌تر است) ولی در ارزیابی نه.
+    نزدیکی دو منحنی و کاهش هم‌زمان هر دو Loss نشان می‌دهد که <b>بیش‌برازش قابل توجهی وجود ندارد</b>.</li>
+  <li>چون Loss اعتبارسنجی تا اپوک آخر هنوز رو به کاهش بود، Early Stopping فعال نشد و بهترین مدل همان اپوک ۱۵ است.</li>
+</ul>
+
+<h2>۵. ارزیابی روی داده Test</h2>
+<div class="two">
+  <figure style="flex:1.7">
+    <img src="../outputs/confusion_matrix.png" alt="Confusion matrix">
+    <figcaption>شکل ۲ – ماتریس درهم‌ریختگی روی ۱۸۵۳ تصویر Test (چپ: تعداد، راست: نرمال‌شده بر اساس سطر).</figcaption>
+  </figure>
+  <div style="flex:1">
+    <table>
+      <tr><th>کلاس</th><th>Precision</th><th>Recall</th><th>F1</th><th>تعداد</th></tr>
+      <tr><td class="ltr">EOSINOPHIL</td><td>0.967</td><td>0.954</td><td>0.961</td><td>460</td></tr>
+      <tr><td class="ltr">LYMPHOCYTE</td><td>0.998</td><td>1.000</td><td>0.999</td><td>464</td></tr>
+      <tr><td class="ltr">MONOCYTE</td><td>1.000</td><td>0.998</td><td>0.999</td><td>465</td></tr>
+      <tr><td class="ltr">NEUTROPHIL</td><td>0.955</td><td>0.968</td><td>0.962</td><td>464</td></tr>
+      <tr><th>Macro avg</th><th>0.980</th><th>0.980</th><th>0.980</th><th>1853</th></tr>
+      <tr><th>Accuracy</th><th colspan="4">0.980</th></tr>
+    </table>
+  </div>
+</div>
+<ul>
+  <li><b>لنفوسیت و مونوسیت</b> تقریباً بدون خطا تشخیص داده شدند (F1 ≈ ۰٫۹۹۹)؛ لنفوسیت هسته‌ی گرد و بزرگ با سیتوپلاسم کم دارد و مونوسیت هسته‌ی لوبیایی
+    و سیتوپلاسم زیاد؛ این الگوهای شکلی حتی در ۶۴×۶۴ کاملاً متمایزند. تنها خطای این دو کلاس، یک مونوسیت است که لنفوسیت پیش‌بینی شده.</li>
+  <li><b>تقریباً همه خطاها (۳۶ از ۳۷) بین ائوزینوفیل و نوتروفیل است</b> (۲۱ ائوزینوفیل → نوتروفیل و ۱۵ نوتروفیل → ائوزینوفیل). هر دو گرانولوسیت‌اند و
+    هسته‌ی چندلوبی دارند؛ تفاوت اصلی آن‌ها رنگ و اندازه‌ی گرانول‌های سیتوپلاسم (نارنجی-قرمز در ائوزینوفیل) است که با کوچک‌کردن تصویر به ۶۴×۶۴ تا حدی از بین می‌رود.
+    بنابراین Recall این دو کلاس (۹۵٫۴٪ و ۹۶٫۸٪) پایین‌تر از بقیه است. استفاده از وضوح بالاتر احتمالاً این خطا را کاهش می‌دهد.</li>
+</ul>
+
+<h2>۶. مصورسازی نقشه‌های ویژگی</h2>
+<p>یک تصویر ائوزینوفیل از داده Test (که با احتمال ۱٫۰۰ درست طبقه‌بندی شد) به شبکه داده شد و با <code>forward hook</code>، خروجی لایه کانولوشن اول
+(بلوک ۱ پس از BN+ReLU، ۳۲ کانال ۶۴×۶۴) و لایه کانولوشن آخر (بلوک ۴ پس از BN+ReLU، ۲۵۶ کانال ۸×۸) استخراج شد.</p>
+<figure>
+  <img src="../outputs/feature_maps_first_conv.png" alt="First conv feature maps" style="max-width:72%">
+  <figcaption>شکل ۳ – هر ۳۲ نقشه ویژگی لایه کانولوشن اول (مرتب‌شده بر اساس میانگین فعال‌سازی).</figcaption>
+</figure>
+<figure>
+  <img src="../outputs/feature_maps_last_conv.png" alt="Last conv feature maps" style="max-width:72%">
+  <figcaption>شکل ۴ – ۳۲ کانال پرفعالیت از ۲۵۶ کانال لایه کانولوشن آخر (۸×۸).</figcaption>
+</figure>
+<p><b>تحلیل تفاوت دو لایه:</b></p>
+<ul>
+  <li><b>لایه اول – ویژگی‌های سطح پایین با وضوح مکانی کامل:</b> نقشه‌ها هنوز شبیه تصویر ورودی‌اند و با چشم قابل تفسیرند.
+    برخی کانال‌ها <b>هسته‌ی بنفش</b> را روشن می‌کنند (ch 3، ch 19، ch 16)، برخی <b>لبه و مرز</b> هسته را به شکل حلقه یا هلال نشان می‌دهند (ch 27، ch 30، ch 8)،
+    برخی به <b>زمینه و گلبول‌های قرمز</b> پاسخ می‌دهند (ch 20، ch 10) و چند کانال لبه‌ی تیز نوار سیاه حاصل از چرخش تصویر را آشکار می‌کنند (ch 21، ch 31).
+    پس لایه اول مانند مجموعه‌ای از آشکارسازهای <b>لبه، رنگ و بافت</b> عمل می‌کند.</li>
+  <li><b>لایه آخر – ویژگی‌های سطح بالا و معنایی:</b> پس از سه مرحله MaxPooling وضوح به ۸×۸ رسیده و شکل سلول دیگر دیده نمی‌شود. تقریباً همه کانال‌های
+    پرفعالیت فقط در <b>مرکز تصویر، محل هسته‌ی گلبول سفید</b> روشن‌اند و زمینه و گلبول‌های قرمز کاملاً حذف شده‌اند. میدان دید هر نورون بخش بزرگی از تصویر را
+    می‌پوشاند و هر کانال یک الگوی انتزاعی (مانند شکل و لوب‌های هسته یا دانه‌های سیتوپلاسم) را کد می‌کند. فعال‌سازی‌ها <b>تُنُک</b>‌اند: حدود ۶۸٪ مقادیر صفرند
+    و ۵۸ کانال از ۲۵۶ کانال برای این تصویر تقریباً خاموش‌اند.</li>
+  <li><b>جمع‌بندی:</b> با عمیق‌تر شدن شبکه، ابعاد مکانی کم و تعداد کانال‌ها زیاد می‌شود و نمایش از «کجا لبه/رنگ هست» به «چه نوع سلولی در تصویر است» تغییر می‌کند.
+    همچنین شبکه بدون هیچ برچسب مکانی یاد گرفته است روی گلبول سفید تمرکز کند و زمینه را نادیده بگیرد.</li>
+</ul>
+
+<h2>۷. نتیجه‌گیری</h2>
+<p>یک CNN چهاربلوکی سبک (۴۲۴ هزار پارامتر) که از صفر آموزش داده شد، در کمتر از ۱۱ دقیقه روی CPU به دقت <b>۹۸٫۰٪</b> و Macro-F1 برابر <b>۰٫۹۸۰</b> روی داده Test
+(بدون نشت داده) رسید. بیشترین بهبود از نرمال‌سازی ورودی به [−1,1]، افزایش داده رنگی، زمان‌بند نرخ یادگیری و جایگزینی Flatten با Global Average Pooling به‌دست آمد.
+خطای باقی‌مانده عمدتاً بین ائوزینوفیل و نوتروفیل است که به جزئیات رنگی گرانول‌ها وابسته‌اند.</p>
+
+</body>
+</html>
