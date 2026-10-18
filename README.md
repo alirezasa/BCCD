@@ -10,9 +10,8 @@
 | فایل | توضیح |
 |---|---|
 | `ADL_HW1_BCCD_CNN.ipynb` | نوت‌بوک اصلی؛ کامنت‌گذاری شده و همه سلول‌ها **اجرا شده‌اند** (فایل تحویلی ۱) |
-| `report/ADL_HW1_Report.pdf` | گزارش ۴ صفحه‌ای (فایل تحویلی ۲) |
-| `report/ADL_HW1_Report.docx` | نسخه Word همان گزارش (قابل ویرایش؛ فونت Tahoma) |
-| `report/report.html` | سورس گزارش؛ برای ویرایش نام و متن گزارش |
+| `report/ADL_HW1_Report.pdf` | گزارش (فایل تحویلی ۲) |
+| `report/ADL_HW1_Report.docx` | نسخه Word  گزارش  |
 | `best_model.pt` | وزن‌های بهترین مدل روی Validation (خروجی Checkpoint) |
 | `outputs/` | نمودارها، ماتریس درهم‌ریختگی، نقشه‌های ویژگی و جدول‌ها (CSV) |
 | `requirements.txt` | کتابخانه‌های لازم |
@@ -41,12 +40,6 @@ jupyter nbconvert --to notebook --execute --inplace ADL_HW1_BCCD_CNN.ipynb
 ```
 
 اجرا روی یک CPU چهار هسته‌ای حدود ۱۱ دقیقه طول می‌کشد (هر اپوک حدود ۴۰ ثانیه). در Google Colab هم کافی است پوشه دیتاست را کنار نوت‌بوک آپلود کنید.
-
-۴. **ساخت دوباره PDF گزارش (اختیاری):** اگر نتایج شما بعد از اجرای دوباره کمی تغییر کرد، اعداد را در `report/report.html` به‌روز کنید،
-فایل را در مرورگر (Chrome) باز کنید و با `Ctrl+P → Save as PDF` (کاغذ A4، بدون Header/Footer، با Background graphics) خروجی بگیرید.
-**نام و شماره دانشجویی** خود را هم در بالای گزارش وارد کنید.
-
-۵. **تحویل:** فایل `ADL_HW1_BCCD_CNN.ipynb` (اجرا شده) و فایل PDF گزارش.
 
 ## نکات طراحی
 
