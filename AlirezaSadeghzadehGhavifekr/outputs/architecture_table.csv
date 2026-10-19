@@ -1,0 +1,24 @@
+Layer,Type,Kernel / Stride,In ch,Out ch,Output shape,Params
+features.0.conv,Conv2d,5x5 / 1,3,32,32x64x64,2400
+features.0.bn,BatchNorm2d,-,-,-,32x64x64,64
+features.0.act,ReLU,-,-,-,32x64x64,0
+features.0.pool,MaxPool2d,2x2 / 2,-,-,32x32x32,0
+features.1.conv,Conv2d,3x3 / 1,32,64,64x32x32,18432
+features.1.bn,BatchNorm2d,-,-,-,64x32x32,128
+features.1.act,ReLU,-,-,-,64x32x32,0
+features.1.pool,MaxPool2d,2x2 / 2,-,-,64x16x16,0
+features.2.conv,Conv2d,3x3 / 1,64,128,128x16x16,73728
+features.2.bn,BatchNorm2d,-,-,-,128x16x16,256
+features.2.act,ReLU,-,-,-,128x16x16,0
+features.2.pool,MaxPool2d,2x2 / 2,-,-,128x8x8,0
+features.3.conv,Conv2d,3x3 / 1,128,256,256x8x8,294912
+features.3.bn,BatchNorm2d,-,-,-,256x8x8,512
+features.3.act,ReLU,-,-,-,256x8x8,0
+features.3.pool,MaxPool2d,2x2 / 2,-,-,256x4x4,0
+classifier.0,AdaptiveAvgPool2d,-,-,-,256x1x1,0
+classifier.1,Flatten,-,-,-,256,0
+classifier.2,Dropout,-,-,-,256,0
+classifier.3,Linear,-,256,128,128,32896
+classifier.4,ReLU,-,-,-,128,0
+classifier.5,Dropout,-,-,-,128,0
+classifier.6,Linear,-,128,4,4,516

@@ -1,0 +1,8 @@
+split mode,group
+train / val / test images,8739 / 1852 / 1853
+epochs run,15
+best epoch,15
+best val loss,0.0737
+best val acc,0.973
+test accuracy,0.98
+trainable params,423844
