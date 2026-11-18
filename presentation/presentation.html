@@ -1,0 +1,296 @@
+<!doctype html><html lang="fa"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BCCD — ارائه‌ی تمرین ۱ (CNN)</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"><style>
+body{margin:0;background:#2b2f36;font-family:'Vazirmatn',Tahoma,sans-serif}
+.wrap{max-width:1280px;margin:32px auto;padding:0 16px}
+.frame{width:100%;aspect-ratio:16/9;overflow:hidden;position:relative;border-radius:8px;box-shadow:0 4px 24px rgba(0,0,0,.4)}
+.frame>section{width:1920px;height:1080px;box-sizing:border-box;position:absolute;left:0;top:0;transform-origin:0 0}
+section *{margin:0;box-sizing:border-box}
+section table{border-collapse:collapse}section td,section th{border:1px solid #E2DED5;padding:.35em .6em}
+section aside{display:none}
+x-shape{display:block;flex:none}
+x-shape[kind=arrow-right]{clip-path:polygon(0 30%,60% 30%,60% 0,100% 50%,60% 100%,60% 70%,0 70%)}
+.notes{direction:rtl;text-align:right;background:#F7F5F0;color:#16233A;border-radius:8px;padding:16px 24px;margin:12px 0 48px;font-size:17px;line-height:1.9}
+.notes b{color:#0E7C7B}
+</style></head><body><div class="wrap"><div class="frame"><section id="cover" data-transition="fade" style="background:#16233A;color:#F7F5F0;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px;display:flex;flex-direction:column;gap:32px">
+<p style="font-size:28px;font-weight:700;color:#F2B544">&#8235;تمرین ۱ · ADL</p>
+<h1 style="font-size:96px;font-weight:700;line-height:1.3">&#8235;طبقه‌بندی گلبول‌های سفید خون با CNN از صفر</h1>
+<p style="font-size:32px;line-height:1.7;color:#C9D3E0">&#8235;دیتاست BCCD · چهار کلاس · PyTorch · بدون Transfer Learning</p>
+<div style="flex:1"></div>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<p style="font-size:64px;font-weight:700;line-height:1.2">98.0%</p>
+<p style="font-size:28px;color:#C9D3E0">&#8235;دقت روی داده‌ی Test</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<p style="font-size:64px;font-weight:700;line-height:1.2">424K</p>
+<p style="font-size:28px;color:#C9D3E0">&#8235;پارامتر قابل آموزش</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<p style="font-size:64px;font-weight:700;line-height:1.2">10 min</p>
+<p style="font-size:28px;color:#C9D3E0">&#8235;زمان آموزش روی CPU</p>
+</div>
+</div>
+<aside>سلام. در این تمرین یک شبکه‌ی کانولوشنی را کاملاً از صفر با PyTorch نوشتم تا چهار نوع گلبول سفید خون را از روی تصویر میکروسکوپی تشخیص بدهد: ائوزینوفیل، لنفوسیت، مونوسیت و نوتروفیل. هیچ مدل از پیش آموزش‌دیده‌ای استفاده نشده است. مدل نهایی حدود ۴۲۴ هزار پارامتر دارد، کل آموزش روی CPU حدود ده دقیقه طول می‌کشد و روی داده‌ی تست به دقت ۹۸ درصد می‌رسد. در ادامه به ترتیب داده و تقسیم‌بندی، معماری و کد مدل، روند آموزش و در آخر نتایج و نقشه‌های ویژگی را توضیح می‌دهم.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 1 — طبقه‌بندی گلبول‌های سفید خون با CNN از صفر</b><br>سلام. در این تمرین یک شبکه‌ی کانولوشنی را کاملاً از صفر با PyTorch نوشتم تا چهار نوع گلبول سفید خون را از روی تصویر میکروسکوپی تشخیص بدهد: ائوزینوفیل، لنفوسیت، مونوسیت و نوتروفیل. هیچ مدل از پیش آموزش‌دیده‌ای استفاده نشده است. مدل نهایی حدود ۴۲۴ هزار پارامتر دارد، کل آموزش روی CPU حدود ده دقیقه طول می‌کشد و روی داده‌ی تست به دقت ۹۸ درصد می‌رسد. در ادامه به ترتیب داده و تقسیم‌بندی، معماری و کد مدل، روند آموزش و در آخر نتایج و نقشه‌های ویژگی را توضیح می‌دهم.</div></div><div class="wrap"><div class="frame"><section id="problem" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش اول · داده</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;مسئله و مجموعه‌داده</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:48px;align-items:center">
+<div style="flex:1;display:flex;flex-direction:column;gap:28px">
+<div style="display:flex;flex-direction:column;gap:4px">
+<p style="font-size:64px;font-weight:700;line-height:1.2;color:#0E7C7B">12,444</p>
+<p style="font-size:28px;line-height:1.6;color:#4A5568">&#8235;تصویر 320×240 در ۴ کلاس تقریباً متوازن</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px">
+<p style="font-size:64px;font-weight:700;line-height:1.2;color:#0E7C7B">348</p>
+<p style="font-size:28px;line-height:1.6;color:#4A5568">&#8235;تصویر میکروسکوپی اصلی؛ بقیه نسخه‌های چرخیده و قرینه‌ی همین‌ها هستند</p>
+</div>
+<p style="font-size:28px;line-height:1.6;color:#16233A">&#8235;ورودی مدل: 64×64 رنگی، نرمال‌شده به بازه‌ی [1+ , 1−]</p>
+</div>
+<img src="../outputs/samples_augmentation.png" alt="نمونه‌ای از هر چهار کلاس گلبول سفید و نسخه‌ی augment‌شده‌ی آن" style="width:920px;height:460px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px">
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">BCCD · CNN</p>
+<aside>دیتاست BCCD تصاویر میکروسکوپی لام خون است و هدف، تشخیص نوع گلبول سفید در چهار کلاس است. در مجموع ۱۲٬۴۴۴ تصویر داریم و کلاس‌ها تقریباً متوازن‌اند، هر کدام حدود ۳۱۰۰ تصویر. ولی یک نکته‌ی مهم وجود دارد: این تصاویر از قبل augment شده‌اند؛ یعنی فقط ۳۴۸ تصویر اصلی وجود دارد و بقیه نسخه‌های چرخیده و قرینه‌شده‌ی همان‌ها هستند. این موضوع در اسلاید بعد مهم می‌شود. در تصویر، ردیف بالا یک نمونه از هر کلاس را بعد از کوچک شدن به ۶۴ در ۶۴ نشان می‌دهد و ردیف پایین همان تصویر را بعد از augmentation خودم. اندازه‌ی ۶۴ در ۶۴ را انتخاب کردم تا آموزش روی CPU سریع باشد، و ورودی را به بازه‌ی منفی یک تا یک نرمال کردم چون ورودیِ صفر-مرکز آموزش را پایدارتر می‌کند.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 2 — مسئله و مجموعه‌داده</b><br>دیتاست BCCD تصاویر میکروسکوپی لام خون است و هدف، تشخیص نوع گلبول سفید در چهار کلاس است. در مجموع ۱۲٬۴۴۴ تصویر داریم و کلاس‌ها تقریباً متوازن‌اند، هر کدام حدود ۳۱۰۰ تصویر. ولی یک نکته‌ی مهم وجود دارد: این تصاویر از قبل augment شده‌اند؛ یعنی فقط ۳۴۸ تصویر اصلی وجود دارد و بقیه نسخه‌های چرخیده و قرینه‌شده‌ی همان‌ها هستند. این موضوع در اسلاید بعد مهم می‌شود. در تصویر، ردیف بالا یک نمونه از هر کلاس را بعد از کوچک شدن به ۶۴ در ۶۴ نشان می‌دهد و ردیف پایین همان تصویر را بعد از augmentation خودم. اندازه‌ی ۶۴ در ۶۴ را انتخاب کردم تا آموزش روی CPU سریع باشد، و ورودی را به بازه‌ی منفی یک تا یک نرمال کردم چون ورودیِ صفر-مرکز آموزش را پایدارتر می‌کند.</div></div><div class="wrap"><div class="frame"><section id="split" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش اول · داده</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;تقسیم گروهی برای جلوگیری از نشت داده</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;تقسیم تصادفی ساده</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;نسخه‌های چرخیده‌ی یک تصویر اصلی هم در Train و هم در Test می‌افتند؛ دقت تست غیرواقعی بالا می‌رود.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;border:2px solid #0E7C7B;border-radius:16px;padding:32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5;color:#0E7C7B">&#8235;تقسیم گروهی (انتخاب من)</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;همه‌ی نسخه‌های یک تصویر اصلی یک گروه‌اند و فقط در یک مجموعه قرار می‌گیرند؛ نسبت 70/15/15 در هر کلاس حفظ می‌شود.</p>
+</div>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.6;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 36px;text-align:left;white-space:nowrap"># file name: _&lt;originalId&gt;_&lt;augId&gt;.jpeg<br>orig_id = fname.split("_")[1]<br>group&nbsp;&nbsp; = f"{folder}/{cls}/{orig_id}"<br>assert df.groupby("group")["split"].nunique().max() == 1</p>
+<div style="display:flex;flex-direction:row-reverse;gap:48px;align-items:baseline">
+<p style="font-size:28px;color:#4A5568">&#8235;Train / Val / Test:</p>
+<p style="font-size:32px;font-weight:700">8,739 / 1,852 / 1,853</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">BCCD · CNN</p>
+<aside>این مهم‌ترین تصمیم بخش داده است. چون از هر تصویر اصلی ده‌ها نسخه‌ی چرخیده وجود دارد، اگر داده را کاملاً تصادفی تقسیم کنم، نسخه‌های تقریباً یکسان از یک تصویر هم در آموزش و هم در تست قرار می‌گیرند. در آن صورت مدل عملاً جواب تست را دیده و دقت تست واقعی نیست؛ به این می‌گویند نشت داده. برای حل این مشکل، از نام فایل شناسه‌ی تصویر اصلی را بیرون کشیدم؛ عدد اول نام فایل همان شناسه است. همه‌ی نسخه‌های یک تصویر اصلی یک گروه می‌شوند و تابع group_stratified_split برای هر کلاس گروه‌ها را بُر می‌زند و آن‌ها را بین val و test و train پخش می‌کند تا نسبت هفتاد، پانزده، پانزده حفظ شود. در آخر با یک assert چک می‌کنم که هیچ گروهی در دو مجموعه نباشد. نتیجه ۸۷۳۹ تصویر آموزش، ۱۸۵۲ اعتبارسنجی و ۱۸۵۳ تست است. اگر استاد بپرسد: با SPLIT_MODE برابر random می‌شود تقسیم ساده را هم امتحان کرد، ولی عددش قابل اعتماد نیست.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 3 — تقسیم گروهی برای جلوگیری از نشت داده</b><br>این مهم‌ترین تصمیم بخش داده است. چون از هر تصویر اصلی ده‌ها نسخه‌ی چرخیده وجود دارد، اگر داده را کاملاً تصادفی تقسیم کنم، نسخه‌های تقریباً یکسان از یک تصویر هم در آموزش و هم در تست قرار می‌گیرند. در آن صورت مدل عملاً جواب تست را دیده و دقت تست واقعی نیست؛ به این می‌گویند نشت داده. برای حل این مشکل، از نام فایل شناسه‌ی تصویر اصلی را بیرون کشیدم؛ عدد اول نام فایل همان شناسه است. همه‌ی نسخه‌های یک تصویر اصلی یک گروه می‌شوند و تابع group_stratified_split برای هر کلاس گروه‌ها را بُر می‌زند و آن‌ها را بین val و test و train پخش می‌کند تا نسبت هفتاد، پانزده، پانزده حفظ شود. در آخر با یک assert چک می‌کنم که هیچ گروهی در دو مجموعه نباشد. نتیجه ۸۷۳۹ تصویر آموزش، ۱۸۵۲ اعتبارسنجی و ۱۸۵۳ تست است. اگر استاد بپرسد: با SPLIT_MODE برابر random می‌شود تقسیم ساده را هم امتحان کرد، ولی عددش قابل اعتماد نیست.</div></div><div class="wrap"><div class="frame"><section id="pipeline" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش اول · داده</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;پیش‌پردازش و افزایش داده</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:24px;justify-content:center">
+<div style="display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;هندسی</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;چرخش ±20 درجه، قرینه‌ی افقی و عمودی، برش و جابه‌جایی کوچک؛ سلول جهت خاصی ندارد.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;رنگ</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;ColorJitter ملایم برای شبیه‌سازی تفاوت رنگ‌آمیزی و نور میکروسکوپ.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;فقط روی Train</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;Val و Test فقط نرمال می‌شوند.</p>
+</div>
+</div>
+<p style="font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.75;color:#E6EAF0;background:#16233A;border-radius:16px;padding:32px 36px;text-align:left;white-space:nowrap">train_tf = T.Compose([<br>&nbsp;&nbsp;T.RandomRotation(degrees=20),<br>&nbsp;&nbsp;T.RandomHorizontalFlip(p=0.5),<br>&nbsp;&nbsp;T.RandomVerticalFlip(p=0.5),<br>&nbsp;&nbsp;T.RandomResizedCrop(64, scale=(0.8, 1.0)),<br>&nbsp;&nbsp;T.RandomAffine(0, translate=(0.05, 0.05)),<br>&nbsp;&nbsp;T.ColorJitter(0.2, 0.2, 0.2, hue=0.03),<br>&nbsp;&nbsp;T.ToDtype(torch.float32, scale=True),<br>&nbsp;&nbsp;T.Normalize([0.5]*3, [0.5]*3),&nbsp;&nbsp;# -> [-1, 1]<br>])</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">BCCD · CNN</p>
+<aside>همه‌ی تصاویر یک بار خوانده و به ۶۴ در ۶۴ کوچک می‌شوند و به صورت uint8 در حافظه می‌مانند، حدود ۱۵۰ مگابایت، تا روی CPU سرعت خواندن گلوگاه نباشد. augmentation در لحظه و فقط روی داده‌ی آموزش اعمال می‌شود. این کد همان train_tf در نوت‌بوک است: چرخش تا بیست درجه، قرینه‌ی افقی و عمودی، چون گلبول جهت بالا و پایین ندارد؛ یک برش تصادفی که بین هشتاد تا صد درصد تصویر را نگه می‌دارد؛ جابه‌جایی پنج درصدی؛ و ColorJitter ملایم. ColorJitter را اضافه بر خواسته‌ی تمرین گذاشتم، چون رنگ‌آمیزی و نور لام‌ها با هم فرق دارد و بدون آن، اعتبارسنجی خیلی ناپایدار بود. دو خط آخر نرمال‌سازی است: اول تقسیم بر ۲۵۵ که به صفر تا یک می‌برد و بعد میانگین و انحراف نیم که بازه را منفی یک تا یک می‌کند. برای داده‌ی اعتبارسنجی و تست فقط همین دو خط آخر اجرا می‌شود.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 4 — پیش‌پردازش و افزایش داده</b><br>همه‌ی تصاویر یک بار خوانده و به ۶۴ در ۶۴ کوچک می‌شوند و به صورت uint8 در حافظه می‌مانند، حدود ۱۵۰ مگابایت، تا روی CPU سرعت خواندن گلوگاه نباشد. augmentation در لحظه و فقط روی داده‌ی آموزش اعمال می‌شود. این کد همان train_tf در نوت‌بوک است: چرخش تا بیست درجه، قرینه‌ی افقی و عمودی، چون گلبول جهت بالا و پایین ندارد؛ یک برش تصادفی که بین هشتاد تا صد درصد تصویر را نگه می‌دارد؛ جابه‌جایی پنج درصدی؛ و ColorJitter ملایم. ColorJitter را اضافه بر خواسته‌ی تمرین گذاشتم، چون رنگ‌آمیزی و نور لام‌ها با هم فرق دارد و بدون آن، اعتبارسنجی خیلی ناپایدار بود. دو خط آخر نرمال‌سازی است: اول تقسیم بر ۲۵۵ که به صفر تا یک می‌برد و بعد میانگین و انحراف نیم که بازه را منفی یک تا یک می‌کند. برای داده‌ی اعتبارسنجی و تست فقط همین دو خط آخر اجرا می‌شود.</div></div><div class="wrap"><div class="frame"><section id="arch" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش دوم · معماری</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;معماری BloodCellCNN</h2>
+<div style="display:flex;flex-direction:row;gap:10px;align-items:center;text-align:center">
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Input</p>
+<p style="font-size:24px;color:#4A5568">RGB</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">3×64×64</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Block 1</p>
+<p style="font-size:24px;color:#4A5568">Conv 5×5</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">32×32×32</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Block 2</p>
+<p style="font-size:24px;color:#4A5568">Conv 3×3</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">64×16×16</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Block 3</p>
+<p style="font-size:24px;color:#4A5568">Conv 3×3</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">128×8×8</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Block 4</p>
+<p style="font-size:24px;color:#4A5568">Conv 3×3</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">256×4×4</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">GAP</p>
+<p style="font-size:24px;color:#4A5568">AvgPool</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">256</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#16233A;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700;color:#F7F5F0">FC</p>
+<p style="font-size:24px;color:#C9D3E0">128 → 4</p>
+<p style="font-size:24px;color:#F2B544;font-weight:700">logits</p>
+</div>
+</div>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;هر بلوک کانولوشن</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568;text-align:left">Conv2d → BatchNorm → ReLU → MaxPool(2)</p>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;کانال‌ها دو برابر، ابعاد مکانی نصف.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;سر طبقه‌بندی</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568;text-align:left">GAP → Dropout(0.5) → FC(128) → ReLU → Dropout(0.3) → FC(4)</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا GAP به جای Flatten؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;پارامترهای بخش FC از حدود ۱ میلیون به ۳۳ هزار می‌رسد و بیش‌برازش کم می‌شود.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">BCCD · CNN</p>
+<aside>معماری از دو بخش تشکیل شده است: استخراج ویژگی و طبقه‌بندی. بخش استخراج ویژگی چهار بلوک پشت سر هم است و هر بلوک چهار لایه دارد: کانولوشن، BatchNorm، ReLU و MaxPool دو در دو. در هر بلوک تعداد کانال‌ها دو برابر و طول و عرض نصف می‌شود؛ یعنی از سه کانالِ ۶۴ در ۶۴ می‌رسیم به ۳۲، ۶۴، ۱۲۸ و در نهایت ۲۵۶ کانالِ ۴ در ۴. فقط بلوک اول فیلتر پنج در پنج دارد تا میدان دید بزرگ‌تری برای لبه‌ها و بافت‌های اولیه داشته باشد؛ بقیه سه در سه هستند. بعد از بلوک چهارم به جای Flatten کردنِ ۴۰۹۶ ویژگی، از Global Average Pooling استفاده کردم که از هر کانال فقط یک میانگین می‌گیرد و ۲۵۶ عدد می‌دهد. این کار پارامترهای بخش تمام‌متصل را از حدود یک میلیون به ۳۳ هزار کم کرد و مهم‌ترین عامل کم شدن بیش‌برازش بود. بعد Dropout نیم، یک لایه‌ی ۱۲۸ نورونی، ReLU، Dropout سه‌دهم و در آخر چهار نورون خروجی. خروجی logit است و Softmax داخل خود تابع زیان CrossEntropy حساب می‌شود. کل مدل ۴۲۳٬۸۴۴ پارامتر دارد.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 5 — معماری BloodCellCNN</b><br>معماری از دو بخش تشکیل شده است: استخراج ویژگی و طبقه‌بندی. بخش استخراج ویژگی چهار بلوک پشت سر هم است و هر بلوک چهار لایه دارد: کانولوشن، BatchNorm، ReLU و MaxPool دو در دو. در هر بلوک تعداد کانال‌ها دو برابر و طول و عرض نصف می‌شود؛ یعنی از سه کانالِ ۶۴ در ۶۴ می‌رسیم به ۳۲، ۶۴، ۱۲۸ و در نهایت ۲۵۶ کانالِ ۴ در ۴. فقط بلوک اول فیلتر پنج در پنج دارد تا میدان دید بزرگ‌تری برای لبه‌ها و بافت‌های اولیه داشته باشد؛ بقیه سه در سه هستند. بعد از بلوک چهارم به جای Flatten کردنِ ۴۰۹۶ ویژگی، از Global Average Pooling استفاده کردم که از هر کانال فقط یک میانگین می‌گیرد و ۲۵۶ عدد می‌دهد. این کار پارامترهای بخش تمام‌متصل را از حدود یک میلیون به ۳۳ هزار کم کرد و مهم‌ترین عامل کم شدن بیش‌برازش بود. بعد Dropout نیم، یک لایه‌ی ۱۲۸ نورونی، ReLU، Dropout سه‌دهم و در آخر چهار نورون خروجی. خروجی logit است و Softmax داخل خود تابع زیان CrossEntropy حساب می‌شود. کل مدل ۴۲۳٬۸۴۴ پارامتر دارد.</div></div><div class="wrap"><div class="frame"><section id="code" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش دوم · معماری</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;کد مدل</h2>
+<div style="display:flex;flex-direction:row;gap:32px;align-items:stretch">
+<p style="flex:1;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.7;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">class ConvBlock(nn.Module):<br>&nbsp;&nbsp;def __init__(self, in_ch, out_ch, k=3):<br>&nbsp;&nbsp;&nbsp;&nbsp;self.conv = nn.Conv2d(in_ch, out_ch, k,<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;padding=k // 2, bias=False)<br>&nbsp;&nbsp;&nbsp;&nbsp;self.bn&nbsp;&nbsp; = nn.BatchNorm2d(out_ch)<br>&nbsp;&nbsp;&nbsp;&nbsp;self.act&nbsp; = nn.ReLU(inplace=True)<br>&nbsp;&nbsp;&nbsp;&nbsp;self.pool = nn.MaxPool2d(2)<br><br>&nbsp;&nbsp;def forward(self, x):<br>&nbsp;&nbsp;&nbsp;&nbsp;return self.pool(self.act(<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.bn(self.conv(x))))</p>
+<p style="flex:1;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.7;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">self.features = nn.Sequential(<br>&nbsp;&nbsp;ConvBlock(3,&nbsp;&nbsp; 32, k=5),&nbsp;# 64 -> 32<br>&nbsp;&nbsp;ConvBlock(32,&nbsp; 64),&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # 32 -> 16<br>&nbsp;&nbsp;ConvBlock(64,&nbsp; 128),&nbsp;&nbsp;&nbsp;&nbsp; # 16 -> 8<br>&nbsp;&nbsp;ConvBlock(128, 256))&nbsp;&nbsp;&nbsp;&nbsp; # 8&nbsp; -> 4<br>self.classifier = nn.Sequential(<br>&nbsp;&nbsp;nn.AdaptiveAvgPool2d(1), nn.Flatten(),<br>&nbsp;&nbsp;nn.Dropout(0.5),<br>&nbsp;&nbsp;nn.Linear(256, 128), nn.ReLU(),<br>&nbsp;&nbsp;nn.Dropout(0.3),<br>&nbsp;&nbsp;nn.Linear(128, num_classes))</p>
+</div>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;bias=False در کانولوشن، چون BatchNorm بعدی خودش bias دارد · padding=k//2 ابعاد را قبل از Pooling ثابت نگه می‌دارد.</p>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">BCCD · CNN</p>
+<aside>این همان کد نوت‌بوک است. سمت چپ کلاس ConvBlock است که یک بلوک را تعریف می‌کند. دو نکته‌ی کوچک دارد که ممکن است پرسیده شود. اول اینکه bias کانولوشن را خاموش کرده‌ام، چون بلافاصله بعدش BatchNorm می‌آید که میانگین را کم می‌کند و بایاس خودش را دارد؛ پس بایاس کانولوشن بی‌اثر و اضافه است. دوم اینکه padding برابر نصف اندازه‌ی کرنل است تا خود کانولوشن ابعاد را کم نکند و فقط MaxPool ابعاد را نصف کند. در forward ترتیب اجرا مشخص است: کانولوشن، نرمال‌سازی، ReLU و بعد pooling. سمت راست کلاس اصلی است: features چهار ConvBlock پشت سر هم با nn.Sequential و classifier که با AdaptiveAvgPool2d شروع می‌شود، یعنی همان Global Average Pooling، بعد Flatten، Dropout، لایه‌ی خطی ۲۵۶ به ۱۲۸، ReLU، Dropout و لایه‌ی خطی آخر به تعداد کلاس‌ها. forward مدل فقط یک خط است: classifier روی خروجی features.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 6 — کد مدل</b><br>این همان کد نوت‌بوک است. سمت چپ کلاس ConvBlock است که یک بلوک را تعریف می‌کند. دو نکته‌ی کوچک دارد که ممکن است پرسیده شود. اول اینکه bias کانولوشن را خاموش کرده‌ام، چون بلافاصله بعدش BatchNorm می‌آید که میانگین را کم می‌کند و بایاس خودش را دارد؛ پس بایاس کانولوشن بی‌اثر و اضافه است. دوم اینکه padding برابر نصف اندازه‌ی کرنل است تا خود کانولوشن ابعاد را کم نکند و فقط MaxPool ابعاد را نصف کند. در forward ترتیب اجرا مشخص است: کانولوشن، نرمال‌سازی، ReLU و بعد pooling. سمت راست کلاس اصلی است: features چهار ConvBlock پشت سر هم با nn.Sequential و classifier که با AdaptiveAvgPool2d شروع می‌شود، یعنی همان Global Average Pooling، بعد Flatten، Dropout، لایه‌ی خطی ۲۵۶ به ۱۲۸، ReLU، Dropout و لایه‌ی خطی آخر به تعداد کلاس‌ها. forward مدل فقط یک خط است: classifier روی خروجی features.</div></div><div class="wrap"><div class="frame"><section id="training" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش سوم · آموزش</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;حلقه‌ی آموزش</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:stretch">
+<table style="width:620px;font-size:28px;color:#16233A;background:#FFFFFF;border-radius:12px">
+<tr><th style="width:55%;text-align:left">مقدار</th><th style="width:45%;text-align:right">تنظیم</th></tr>
+<tr><td>Adam, lr = 1e-3</td><td>&#8235;بهینه‌ساز</td></tr>
+<tr><td>1e-4</td><td>Weight decay</td></tr>
+<tr><td>CosineAnnealing</td><td>&#8235;زمان‌بند LR</td></tr>
+<tr><td>64</td><td>Batch size</td></tr>
+<tr><td>15</td><td>&#8235;حداکثر اپوک</td></tr>
+<tr><td>patience = 5</td><td>Early stopping</td></tr>
+<tr><td>CrossEntropy</td><td>&#8235;تابع زیان</td></tr>
+</table>
+<p style="flex:1;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.7;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">for epoch in range(1, EPOCHS + 1):<br>&nbsp;&nbsp;tr_loss, tr_acc = run_epoch(model, train_loader, train=True)<br>&nbsp;&nbsp;va_loss, va_acc = run_epoch(model, val_loader)<br>&nbsp;&nbsp;scheduler.step()<br><br>&nbsp;&nbsp;if va_loss &lt; best_val_loss:&nbsp;&nbsp;&nbsp;&nbsp; # checkpoint<br>&nbsp;&nbsp;&nbsp;&nbsp;best_val_loss, wait = va_loss, 0<br>&nbsp;&nbsp;&nbsp;&nbsp;torch.save(model.state_dict(), CKPT)<br>&nbsp;&nbsp;else:<br>&nbsp;&nbsp;&nbsp;&nbsp;wait += 1<br>&nbsp;&nbsp;if wait >= PATIENCE:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # early stopping<br>&nbsp;&nbsp;&nbsp;&nbsp;break</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">BCCD · CNN</p>
+<aside>تنظیمات آموزش همان خواسته‌ی تمرین است: بهینه‌ساز Adam با نرخ یادگیری یک‌هزارم، اندازه‌ی دسته ۶۴ و حداکثر ۱۵ اپوک. دو چیز خودم اضافه کردم: weight decay کوچک برای منظم‌سازی و زمان‌بند کسینوسی که نرخ یادگیری را به‌نرمی تا نزدیک صفر پایین می‌آورد. تابع run_epoch یک دور کامل روی داده می‌زند؛ اگر train باشد گرادیان می‌گیرد و وزن‌ها را به‌روز می‌کند، وگرنه فقط ارزیابی می‌کند، و میانگین loss و دقت را برمی‌گرداند. در حلقه‌ی اصلی بعد از هر اپوک دو سازوکار داریم. اول Model Checkpoint: اگر loss اعتبارسنجی از بهترین مقدار قبلی کمتر شد، وزن‌ها در best_model.pt ذخیره می‌شوند. دوم Early Stopping: اگر پنج اپوک پشت سر هم بهبودی نباشد، آموزش متوقف می‌شود. معیار هر دو loss اعتبارسنجی است نه دقت، چون loss حساس‌تر است. در اجرای نهایی توقف زودهنگام فعال نشد و بهترین مدل همان اپوک پانزدهم بود.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 7 — حلقه‌ی آموزش</b><br>تنظیمات آموزش همان خواسته‌ی تمرین است: بهینه‌ساز Adam با نرخ یادگیری یک‌هزارم، اندازه‌ی دسته ۶۴ و حداکثر ۱۵ اپوک. دو چیز خودم اضافه کردم: weight decay کوچک برای منظم‌سازی و زمان‌بند کسینوسی که نرخ یادگیری را به‌نرمی تا نزدیک صفر پایین می‌آورد. تابع run_epoch یک دور کامل روی داده می‌زند؛ اگر train باشد گرادیان می‌گیرد و وزن‌ها را به‌روز می‌کند، وگرنه فقط ارزیابی می‌کند، و میانگین loss و دقت را برمی‌گرداند. در حلقه‌ی اصلی بعد از هر اپوک دو سازوکار داریم. اول Model Checkpoint: اگر loss اعتبارسنجی از بهترین مقدار قبلی کمتر شد، وزن‌ها در best_model.pt ذخیره می‌شوند. دوم Early Stopping: اگر پنج اپوک پشت سر هم بهبودی نباشد، آموزش متوقف می‌شود. معیار هر دو loss اعتبارسنجی است نه دقت، چون loss حساس‌تر است. در اجرای نهایی توقف زودهنگام فعال نشد و بهترین مدل همان اپوک پانزدهم بود.</div></div><div class="wrap"><div class="frame"><section id="tuning" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش سوم · آموزش</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;روند رسیدن به تنظیمات نهایی</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:32px;align-items:stretch">
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:36px">
+<p style="font-size:28px;font-weight:700;color:#4A5568">&#8235;نسخه‌ی ۱ · پایه</p>
+<p style="font-size:96px;font-weight:700;line-height:1.2">75.1%</p>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;ورودی [1 , 0]، Flatten و FC بزرگ. Loss اعتبارسنجی بسیار ناپایدار (تا 13.5).</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:36px">
+<p style="font-size:28px;font-weight:700;color:#4A5568">&#8235;نسخه‌ی ۲</p>
+<p style="font-size:96px;font-weight:700;line-height:1.2">93.5%</p>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;+ ورودی [1+ , 1−]، ColorJitter و VerticalFlip، weight decay و Cosine LR. آموزش پایدار شد.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:12px;background:#16233A;border-radius:16px;padding:36px">
+<p style="font-size:28px;font-weight:700;color:#F2B544">&#8235;نسخه‌ی ۳ · نهایی</p>
+<p style="font-size:96px;font-weight:700;line-height:1.2;color:#F7F5F0">98.0%</p>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;+ Global Average Pooling به جای Flatten. کمترین Loss اعتبارسنجی.</p>
+</div>
+</div>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;اعداد: دقت روی Test. نسخه‌های ۱ و ۲ از اجراهای جداگانه با همین کد گزارش شده‌اند.</p>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">BCCD · CNN</p>
+<aside>مدل از اول به این شکل نبود و سه نسخه را امتحان کردم. نسخه‌ی اول ورودی را فقط به صفر تا یک می‌برد و بعد از کانولوشن‌ها Flatten می‌کرد و یک لایه‌ی تمام‌متصل بزرگ داشت. دقت تست فقط حدود ۷۵ درصد شد و loss اعتبارسنجی به‌شدت بالا و پایین می‌پرید، حتی تا سیزده و نیم. دلیلش دو چیز بود: تصاویر هر مجموعه از لام‌های متفاوتی‌اند و رنگ و نورشان فرق دارد، و لایه‌ی تمام‌متصل با حدود یک میلیون پارامتر جزئیات تصاویر آموزش را حفظ می‌کرد. در نسخه‌ی دوم ورودی را صفر-مرکز کردم، ColorJitter و قرینه‌ی عمودی اضافه کردم و weight decay و زمان‌بند کسینوسی گذاشتم؛ آموزش پایدار شد و دقت به ۹۳ و نیم درصد رسید. در نسخه‌ی سوم Flatten را با Global Average Pooling عوض کردم که ظرفیت بخش تمام‌متصل را خیلی کم کرد و دقت به ۹۸ درصد رسید. پس دو عامل اصلی بهبود، ColorJitter برای تفاوت رنگ و GAP برای کنترل بیش‌برازش بودند.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 8 — روند رسیدن به تنظیمات نهایی</b><br>مدل از اول به این شکل نبود و سه نسخه را امتحان کردم. نسخه‌ی اول ورودی را فقط به صفر تا یک می‌برد و بعد از کانولوشن‌ها Flatten می‌کرد و یک لایه‌ی تمام‌متصل بزرگ داشت. دقت تست فقط حدود ۷۵ درصد شد و loss اعتبارسنجی به‌شدت بالا و پایین می‌پرید، حتی تا سیزده و نیم. دلیلش دو چیز بود: تصاویر هر مجموعه از لام‌های متفاوتی‌اند و رنگ و نورشان فرق دارد، و لایه‌ی تمام‌متصل با حدود یک میلیون پارامتر جزئیات تصاویر آموزش را حفظ می‌کرد. در نسخه‌ی دوم ورودی را صفر-مرکز کردم، ColorJitter و قرینه‌ی عمودی اضافه کردم و weight decay و زمان‌بند کسینوسی گذاشتم؛ آموزش پایدار شد و دقت به ۹۳ و نیم درصد رسید. در نسخه‌ی سوم Flatten را با Global Average Pooling عوض کردم که ظرفیت بخش تمام‌متصل را خیلی کم کرد و دقت به ۹۸ درصد رسید. پس دو عامل اصلی بهبود، ColorJitter برای تفاوت رنگ و GAP برای کنترل بیش‌برازش بودند.</div></div><div class="wrap"><div class="frame"><section id="results" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:28px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش چهارم · ارزیابی</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;منحنی‌های آموزش و نتایج Test</h2>
+<img src="../outputs/training_curves.png" alt="منحنی Loss و Accuracy برای Train و Validation در ۱۵ اپوک" style="width:1664px;height:290px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px">
+<div style="display:flex;flex-direction:row-reverse;gap:32px;align-items:center">
+<img src="../outputs/confusion_matrix.png" alt="ماتریس درهم‌ریختگی روی داده‌ی Test" style="width:720px;height:277px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px">
+<table style="flex:1;font-size:26px;color:#16233A;background:#FFFFFF;border-radius:12px">
+<tr><th style="width:22%">F1</th><th style="width:22%">Recall</th><th style="width:22%">Precision</th><th style="width:34%;text-align:left">Class</th></tr>
+<tr><td>0.961</td><td>0.954</td><td>0.967</td><td>Eosinophil</td></tr>
+<tr><td>0.999</td><td>1.000</td><td>0.998</td><td>Lymphocyte</td></tr>
+<tr><td>0.999</td><td>0.998</td><td>1.000</td><td>Monocyte</td></tr>
+<tr><td>0.962</td><td>0.968</td><td>0.955</td><td>Neutrophil</td></tr>
+</table>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">BCCD · CNN</p>
+<aside>نمودار بالا loss و دقت را برای آموزش و اعتبارسنجی نشان می‌دهد. loss آموزش یکنواخت پایین می‌آید. loss اعتبارسنجی در اپوک‌های اول نوسان دارد و در اپوک چهارم یک جهش بزرگ تا ۲٫۵ دیده می‌شود؛ این مربوط به زمانی است که نرخ یادگیری هنوز بزرگ است و آمار BatchNorm هنوز جا نیفتاده. از اپوک ششم به بعد با کم شدن نرخ یادگیری، منحنی‌ها آرام می‌شوند. دقت اعتبارسنجی در پایان ۹۷٫۳ درصد است و حتی از دقت آموزش بالاتر است، چون روی داده‌ی آموزش augmentation و Dropout فعال است؛ پس بیش‌برازشی دیده نمی‌شود. بهترین مدل روی داده‌ی تست به دقت ۹۸ درصد و Macro F1 برابر ۰٫۹۸ می‌رسد. لنفوسیت و مونوسیت تقریباً بدون خطا تشخیص داده می‌شوند. تقریباً همه‌ی خطاها بین ائوزینوفیل و نوتروفیل است؛ هر دو گرانولوسیت‌اند و هسته‌ی چندلوبی دارند و تفاوتشان بیشتر در رنگ دانه‌های سیتوپلاسم است که در ۶۴ در ۶۴ به‌سختی دیده می‌شود.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 9 — منحنی‌های آموزش و نتایج Test</b><br>نمودار بالا loss و دقت را برای آموزش و اعتبارسنجی نشان می‌دهد. loss آموزش یکنواخت پایین می‌آید. loss اعتبارسنجی در اپوک‌های اول نوسان دارد و در اپوک چهارم یک جهش بزرگ تا ۲٫۵ دیده می‌شود؛ این مربوط به زمانی است که نرخ یادگیری هنوز بزرگ است و آمار BatchNorm هنوز جا نیفتاده. از اپوک ششم به بعد با کم شدن نرخ یادگیری، منحنی‌ها آرام می‌شوند. دقت اعتبارسنجی در پایان ۹۷٫۳ درصد است و حتی از دقت آموزش بالاتر است، چون روی داده‌ی آموزش augmentation و Dropout فعال است؛ پس بیش‌برازشی دیده نمی‌شود. بهترین مدل روی داده‌ی تست به دقت ۹۸ درصد و Macro F1 برابر ۰٫۹۸ می‌رسد. لنفوسیت و مونوسیت تقریباً بدون خطا تشخیص داده می‌شوند. تقریباً همه‌ی خطاها بین ائوزینوفیل و نوتروفیل است؛ هر دو گرانولوسیت‌اند و هسته‌ی چندلوبی دارند و تفاوتشان بیشتر در رنگ دانه‌های سیتوپلاسم است که در ۶۴ در ۶۴ به‌سختی دیده می‌شود.</div></div><div class="wrap"><div class="frame"><section id="features" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش چهارم · ارزیابی</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;نقشه‌های ویژگی: لایه‌ی اول و لایه‌ی آخر</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:16px">
+<img src="../outputs/feature_maps_first_conv.png" alt="نقشه‌های ویژگی اولین لایه‌ی کانولوشن، ۳۲ کانال 64×64" style="width:816px;height:415px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;بلوک ۱ · 64×64</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;هنوز شبیه تصویر ورودی: لبه، رنگ هسته و بافت با وضوح مکانی کامل.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:16px">
+<img src="../outputs/feature_maps_last_conv.png" alt="نقشه‌های ویژگی آخرین لایه‌ی کانولوشن، ۳۲ کانال از ۲۵۶ کانال 8×8" style="width:816px;height:415px;object-fit:contain;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;بلوک ۴ · 8×8</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;انتزاعی و تُنُک: فقط محل هسته فعال است؛ زمینه و گلبول‌های قرمز حذف شده‌اند.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">BCCD · CNN</p>
+<aside>برای اینکه ببینم شبکه چه چیزی یاد گرفته، یک تصویر تست از کلاس ائوزینوفیل را به مدل دادم و با forward hook خروجی دو لایه را بیرون کشیدم: بعد از ReLU در بلوک اول و بعد از ReLU در بلوک چهارم. سمت راست، ۳۲ کانال لایه‌ی اول است که هر کدام ۶۴ در ۶۴ هستند. این نقشه‌ها هنوز شبیه خود تصویرند و با چشم قابل تفسیرند: بعضی کانال‌ها هسته‌ی بنفش گلبول سفید را روشن می‌کنند، بعضی مرز هسته و غشا را مثل یک حلقه نشان می‌دهند و بعضی به زمینه و گلبول‌های قرمز پاسخ می‌دهند. یعنی لایه‌ی اول ویژگی‌های سطح پایین مثل لبه و رنگ و بافت را استخراج می‌کند. سمت چپ، لایه‌ی آخر است که هر نقشه فقط ۸ در ۸ است. اینجا دیگر شکل سلول دیده نمی‌شود؛ تقریباً همه‌ی کانال‌های فعال فقط در مرکز تصویر، یعنی محل هسته، روشن‌اند و زمینه کاملاً حذف شده است. فعال‌سازی‌ها تُنُک هم هستند: حدود ۶۸ درصد مقادیر صفرند. جمع‌بندی اینکه با عمیق‌تر شدن شبکه، نمایش از «کجا لبه و رنگ هست» به «چه نوع سلولی هست» تغییر می‌کند.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 10 — نقشه‌های ویژگی: لایه‌ی اول و لایه‌ی آخر</b><br>برای اینکه ببینم شبکه چه چیزی یاد گرفته، یک تصویر تست از کلاس ائوزینوفیل را به مدل دادم و با forward hook خروجی دو لایه را بیرون کشیدم: بعد از ReLU در بلوک اول و بعد از ReLU در بلوک چهارم. سمت راست، ۳۲ کانال لایه‌ی اول است که هر کدام ۶۴ در ۶۴ هستند. این نقشه‌ها هنوز شبیه خود تصویرند و با چشم قابل تفسیرند: بعضی کانال‌ها هسته‌ی بنفش گلبول سفید را روشن می‌کنند، بعضی مرز هسته و غشا را مثل یک حلقه نشان می‌دهند و بعضی به زمینه و گلبول‌های قرمز پاسخ می‌دهند. یعنی لایه‌ی اول ویژگی‌های سطح پایین مثل لبه و رنگ و بافت را استخراج می‌کند. سمت چپ، لایه‌ی آخر است که هر نقشه فقط ۸ در ۸ است. اینجا دیگر شکل سلول دیده نمی‌شود؛ تقریباً همه‌ی کانال‌های فعال فقط در مرکز تصویر، یعنی محل هسته، روشن‌اند و زمینه کاملاً حذف شده است. فعال‌سازی‌ها تُنُک هم هستند: حدود ۶۸ درصد مقادیر صفرند. جمع‌بندی اینکه با عمیق‌تر شدن شبکه، نمایش از «کجا لبه و رنگ هست» به «چه نوع سلولی هست» تغییر می‌کند.</div></div><div class="wrap"><div class="frame"><section id="qa" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;آمادگی برای پرسش</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;پرسش‌های احتمالی استاد</h2>
+<div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:28px">
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا BatchNorm؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;توزیع ورودی هر لایه را ثابت نگه می‌دارد؛ آموزش سریع‌تر و پایدارتر با lr بزرگ‌تر.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا Val Acc از Train Acc بیشتر است؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;Augmentation و Dropout فقط در حالت آموزش فعال‌اند.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;Softmax کجاست؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;داخل nn.CrossEntropyLoss؛ مدل logit برمی‌گرداند.</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;model.eval() چه می‌کند؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;Dropout خاموش می‌شود و BatchNorm از آمار running استفاده می‌کند.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">BCCD · CNN</p>
+<aside>این اسلاید برای خودم است تا اگر استاد پرسید آماده باشم. چرا BatchNorm: چون خروجی هر کانولوشن را روی batch نرمال می‌کند، توزیع ورودی لایه‌ی بعدی ثابت‌تر می‌ماند و می‌شود با نرخ یادگیری بزرگ‌تر و پایدارتر آموزش داد؛ کمی هم اثر منظم‌سازی دارد. چرا دقت اعتبارسنجی از آموزش بیشتر است: چون دقت آموزش روی تصاویر augment‌شده و با Dropout فعال حساب می‌شود، ولی اعتبارسنجی روی تصاویر تمیز و با شبکه‌ی کامل. Softmax کجاست: مدل logit خام برمی‌گرداند و CrossEntropyLoss در PyTorch خودش log-softmax را حساب می‌کند؛ اگر Softmax را در مدل هم بگذاریم دو بار اعمال می‌شود. model.eval چه می‌کند: Dropout را خاموش می‌کند و BatchNorm به جای آمار همان batch از میانگین و واریانس running استفاده می‌کند. چند پرسش دیگر: چرا MaxPool؟ برای نصف کردن ابعاد و کمی ناوردایی نسبت به جابه‌جایی. چرا فیلتر اول ۵ در ۵؟ برای میدان دید بزرگ‌تر روی تصویر خام. تعداد پارامتر کانولوشن اول؟ ۳۲ فیلتر ضرب در ۳ کانال ضرب در ۲۵، یعنی ۲۴۰۰، چون bias ندارد. چرا تقسیم گروهی؟ برای جلوگیری از نشت داده بین نسخه‌های یک تصویر اصلی.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 11 — پرسش‌های احتمالی استاد</b><br>این اسلاید برای خودم است تا اگر استاد پرسید آماده باشم. چرا BatchNorm: چون خروجی هر کانولوشن را روی batch نرمال می‌کند، توزیع ورودی لایه‌ی بعدی ثابت‌تر می‌ماند و می‌شود با نرخ یادگیری بزرگ‌تر و پایدارتر آموزش داد؛ کمی هم اثر منظم‌سازی دارد. چرا دقت اعتبارسنجی از آموزش بیشتر است: چون دقت آموزش روی تصاویر augment‌شده و با Dropout فعال حساب می‌شود، ولی اعتبارسنجی روی تصاویر تمیز و با شبکه‌ی کامل. Softmax کجاست: مدل logit خام برمی‌گرداند و CrossEntropyLoss در PyTorch خودش log-softmax را حساب می‌کند؛ اگر Softmax را در مدل هم بگذاریم دو بار اعمال می‌شود. model.eval چه می‌کند: Dropout را خاموش می‌کند و BatchNorm به جای آمار همان batch از میانگین و واریانس running استفاده می‌کند. چند پرسش دیگر: چرا MaxPool؟ برای نصف کردن ابعاد و کمی ناوردایی نسبت به جابه‌جایی. چرا فیلتر اول ۵ در ۵؟ برای میدان دید بزرگ‌تر روی تصویر خام. تعداد پارامتر کانولوشن اول؟ ۳۲ فیلتر ضرب در ۳ کانال ضرب در ۲۵، یعنی ۲۴۰۰، چون bias ندارد. چرا تقسیم گروهی؟ برای جلوگیری از نشت داده بین نسخه‌های یک تصویر اصلی.</div></div><div class="wrap"><div class="frame"><section id="summary" style="background:#16233A;color:#F7F5F0;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px;display:flex;flex-direction:column;gap:40px">
+<p style="font-size:28px;font-weight:700;color:#F2B544">&#8235;جمع‌بندی</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.4">&#8235;یک CNN کوچک با تقسیم درست داده و منظم‌سازی مناسب به 98% می‌رسد</h2>
+<div style="flex:1"></div>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;داده</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;تقسیم بر اساس تصویر اصلی؛ بدون نشت داده.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;مدل</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;۴ بلوک Conv-BN-ReLU-Pool و GAP؛ 424 هزار پارامتر.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;خطا</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;تقریباً فقط بین Eosinophil و Neutrophil.</p>
+</div>
+</div>
+<aside>جمع‌بندی می‌کنم. اول، در بخش داده مهم‌ترین کار تقسیم بر اساس تصویر اصلی بود تا عدد دقت تست قابل اعتماد باشد. دوم، مدل یک CNN ساده با چهار بلوک و Global Average Pooling است که با ۴۲۴ هزار پارامتر و ده دقیقه آموزش روی CPU به دقت ۹۸ درصد رسید؛ ColorJitter و GAP دو عامل اصلی بهبود از ۷۵ به ۹۸ درصد بودند. سوم، خطاهای باقی‌مانده تقریباً همه بین ائوزینوفیل و نوتروفیل است که از نظر ظاهری هم شبیه‌اند. اگر بخواهم کار را ادامه بدهم، ورودی بزرگ‌تر مثلاً ۱۲۸ در ۱۲۸ می‌تواند دانه‌های سیتوپلاسم را بهتر نشان بدهد و این دو کلاس را بهتر جدا کند. ممنون از توجه‌تان؛ اگر پرسشی هست در خدمتم.</aside>
+</section>
+</div><div class="notes"><b>اسلاید 12 — یک CNN کوچک با تقسیم درست داده و منظم‌سازی مناسب به 98% می‌رسد</b><br>جمع‌بندی می‌کنم. اول، در بخش داده مهم‌ترین کار تقسیم بر اساس تصویر اصلی بود تا عدد دقت تست قابل اعتماد باشد. دوم، مدل یک CNN ساده با چهار بلوک و Global Average Pooling است که با ۴۲۴ هزار پارامتر و ده دقیقه آموزش روی CPU به دقت ۹۸ درصد رسید؛ ColorJitter و GAP دو عامل اصلی بهبود از ۷۵ به ۹۸ درصد بودند. سوم، خطاهای باقی‌مانده تقریباً همه بین ائوزینوفیل و نوتروفیل است که از نظر ظاهری هم شبیه‌اند. اگر بخواهم کار را ادامه بدهم، ورودی بزرگ‌تر مثلاً ۱۲۸ در ۱۲۸ می‌تواند دانه‌های سیتوپلاسم را بهتر نشان بدهد و این دو کلاس را بهتر جدا کند. ممنون از توجه‌تان؛ اگر پرسشی هست در خدمتم.</div></div><script>function fit(){document.querySelectorAll('.frame').forEach(f=>{f.firstElementChild.style.transform='scale('+(f.clientWidth/1920)+')'})}
+addEventListener('resize',fit);addEventListener('load',fit);fit();</script></body></html>
