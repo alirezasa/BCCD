@@ -1,0 +1,20 @@
+<section id="summary" style="background:#16233A;color:#F7F5F0;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px;display:flex;flex-direction:column;gap:40px">
+<p style="font-size:28px;font-weight:700;color:#F2B544">&#8235;جمع‌بندی</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.4">&#8235;یک CNN کوچک با تقسیم درست داده و منظم‌سازی مناسب به 98% می‌رسد</h2>
+<div style="flex:1"></div>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;داده</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;تقسیم بر اساس تصویر اصلی؛ بدون نشت داده.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;مدل</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;۴ بلوک Conv-BN-ReLU-Pool و GAP؛ 424 هزار پارامتر.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px;border-top:2px solid #F2B544;padding:24px 0 0 0">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;خطا</h3>
+<p style="font-size:28px;line-height:1.7;color:#C9D3E0">&#8235;تقریباً فقط بین Eosinophil و Neutrophil.</p>
+</div>
+</div>
+<aside>جمع‌بندی می‌کنم. اول، در بخش داده مهم‌ترین کار تقسیم بر اساس تصویر اصلی بود تا عدد دقت تست قابل اعتماد باشد. دوم، مدل یک CNN ساده با چهار بلوک و Global Average Pooling است که با ۴۲۴ هزار پارامتر و ده دقیقه آموزش روی CPU به دقت ۹۸ درصد رسید؛ ColorJitter و GAP دو عامل اصلی بهبود از ۷۵ به ۹۸ درصد بودند. سوم، خطاهای باقی‌مانده تقریباً همه بین ائوزینوفیل و نوتروفیل است که از نظر ظاهری هم شبیه‌اند. اگر بخواهم کار را ادامه بدهم، ورودی بزرگ‌تر مثلاً ۱۲۸ در ۱۲۸ می‌تواند دانه‌های سیتوپلاسم را بهتر نشان بدهد و این دو کلاس را بهتر جدا کند. ممنون از توجه‌تان؛ اگر پرسشی هست در خدمتم.</aside>
+</section>

@@ -1,0 +1,64 @@
+<section id="arch" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش دوم · معماری</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;معماری BloodCellCNN</h2>
+<div style="display:flex;flex-direction:row;gap:10px;align-items:center;text-align:center">
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Input</p>
+<p style="font-size:24px;color:#4A5568">RGB</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">3×64×64</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Block 1</p>
+<p style="font-size:24px;color:#4A5568">Conv 5×5</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">32×32×32</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Block 2</p>
+<p style="font-size:24px;color:#4A5568">Conv 3×3</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">64×16×16</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Block 3</p>
+<p style="font-size:24px;color:#4A5568">Conv 3×3</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">128×8×8</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">Block 4</p>
+<p style="font-size:24px;color:#4A5568">Conv 3×3</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">256×4×4</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700">GAP</p>
+<p style="font-size:24px;color:#4A5568">AvgPool</p>
+<p style="font-size:24px;color:#0E7C7B;font-weight:700">256</p>
+</div>
+<x-shape kind="arrow-right" style="width:28px;height:18px;background:#0E7C7B"></x-shape>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px;background:#16233A;border-radius:12px;padding:20px 8px">
+<p style="font-size:28px;font-weight:700;color:#F7F5F0">FC</p>
+<p style="font-size:24px;color:#C9D3E0">128 → 4</p>
+<p style="font-size:24px;color:#F2B544;font-weight:700">logits</p>
+</div>
+</div>
+<div style="display:flex;flex-direction:row-reverse;gap:32px">
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;هر بلوک کانولوشن</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568;text-align:left">Conv2d → BatchNorm → ReLU → MaxPool(2)</p>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;کانال‌ها دو برابر، ابعاد مکانی نصف.</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;سر طبقه‌بندی</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568;text-align:left">GAP → Dropout(0.5) → FC(128) → ReLU → Dropout(0.3) → FC(4)</p>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:10px;background:#FFFFFF;border:1px solid #E2DED5;border-radius:16px;padding:28px 32px">
+<h3 style="font-size:32px;font-weight:700;line-height:1.5">&#8235;چرا GAP به جای Flatten؟</h3>
+<p style="font-size:28px;line-height:1.7;color:#4A5568">&#8235;پارامترهای بخش FC از حدود ۱ میلیون به ۳۳ هزار می‌رسد و بیش‌برازش کم می‌شود.</p>
+</div>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">BCCD · CNN</p>
+<aside>معماری از دو بخش تشکیل شده است: استخراج ویژگی و طبقه‌بندی. بخش استخراج ویژگی چهار بلوک پشت سر هم است و هر بلوک چهار لایه دارد: کانولوشن، BatchNorm، ReLU و MaxPool دو در دو. در هر بلوک تعداد کانال‌ها دو برابر و طول و عرض نصف می‌شود؛ یعنی از سه کانالِ ۶۴ در ۶۴ می‌رسیم به ۳۲، ۶۴، ۱۲۸ و در نهایت ۲۵۶ کانالِ ۴ در ۴. فقط بلوک اول فیلتر پنج در پنج دارد تا میدان دید بزرگ‌تری برای لبه‌ها و بافت‌های اولیه داشته باشد؛ بقیه سه در سه هستند. بعد از بلوک چهارم به جای Flatten کردنِ ۴۰۹۶ ویژگی، از Global Average Pooling استفاده کردم که از هر کانال فقط یک میانگین می‌گیرد و ۲۵۶ عدد می‌دهد. این کار پارامترهای بخش تمام‌متصل را از حدود یک میلیون به ۳۳ هزار کم کرد و مهم‌ترین عامل کم شدن بیش‌برازش بود. بعد Dropout نیم، یک لایه‌ی ۱۲۸ نورونی، ReLU، Dropout سه‌دهم و در آخر چهار نورون خروجی. خروجی logit است و Softmax داخل خود تابع زیان CrossEntropy حساب می‌شود. کل مدل ۴۲۳٬۸۴۴ پارامتر دارد.</aside>
+</section>

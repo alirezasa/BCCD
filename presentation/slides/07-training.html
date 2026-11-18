@@ -1,0 +1,19 @@
+<section id="training" style="background:#F7F5F0;color:#16233A;font-family:'Vazirmatn', Tahoma, sans-serif;text-align:right;padding:128px 128px 160px;display:flex;flex-direction:column;gap:36px">
+<p style="font-size:24px;font-weight:700;color:#0E7C7B">&#8235;بخش سوم · آموزش</p>
+<h2 style="font-size:64px;font-weight:700;line-height:1.3">&#8235;حلقه‌ی آموزش</h2>
+<div style="display:flex;flex-direction:row-reverse;gap:40px;align-items:stretch">
+<table style="width:620px;font-size:28px;color:#16233A;background:#FFFFFF;border-radius:12px">
+<tr><th style="width:55%;text-align:left">مقدار</th><th style="width:45%;text-align:right">تنظیم</th></tr>
+<tr><td>Adam, lr = 1e-3</td><td>&#8235;بهینه‌ساز</td></tr>
+<tr><td>1e-4</td><td>Weight decay</td></tr>
+<tr><td>CosineAnnealing</td><td>&#8235;زمان‌بند LR</td></tr>
+<tr><td>64</td><td>Batch size</td></tr>
+<tr><td>15</td><td>&#8235;حداکثر اپوک</td></tr>
+<tr><td>patience = 5</td><td>Early stopping</td></tr>
+<tr><td>CrossEntropy</td><td>&#8235;تابع زیان</td></tr>
+</table>
+<p style="flex:1;font-family:'JetBrains Mono', 'Courier New', monospace;font-size:24px;line-height:1.7;color:#E6EAF0;background:#16233A;border-radius:16px;padding:28px 32px;text-align:left;white-space:nowrap">for epoch in range(1, EPOCHS + 1):<br>&nbsp;&nbsp;tr_loss, tr_acc = run_epoch(model, train_loader, train=True)<br>&nbsp;&nbsp;va_loss, va_acc = run_epoch(model, val_loader)<br>&nbsp;&nbsp;scheduler.step()<br><br>&nbsp;&nbsp;if va_loss &lt; best_val_loss:&nbsp;&nbsp;&nbsp;&nbsp; # checkpoint<br>&nbsp;&nbsp;&nbsp;&nbsp;best_val_loss, wait = va_loss, 0<br>&nbsp;&nbsp;&nbsp;&nbsp;torch.save(model.state_dict(), CKPT)<br>&nbsp;&nbsp;else:<br>&nbsp;&nbsp;&nbsp;&nbsp;wait += 1<br>&nbsp;&nbsp;if wait >= PATIENCE:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; # early stopping<br>&nbsp;&nbsp;&nbsp;&nbsp;break</p>
+</div>
+<p style="position:absolute;left:128px;bottom:64px;font-size:24px;color:#8A8F98">BCCD · CNN</p>
+<aside>تنظیمات آموزش همان خواسته‌ی تمرین است: بهینه‌ساز Adam با نرخ یادگیری یک‌هزارم، اندازه‌ی دسته ۶۴ و حداکثر ۱۵ اپوک. دو چیز خودم اضافه کردم: weight decay کوچک برای منظم‌سازی و زمان‌بند کسینوسی که نرخ یادگیری را به‌نرمی تا نزدیک صفر پایین می‌آورد. تابع run_epoch یک دور کامل روی داده می‌زند؛ اگر train باشد گرادیان می‌گیرد و وزن‌ها را به‌روز می‌کند، وگرنه فقط ارزیابی می‌کند، و میانگین loss و دقت را برمی‌گرداند. در حلقه‌ی اصلی بعد از هر اپوک دو سازوکار داریم. اول Model Checkpoint: اگر loss اعتبارسنجی از بهترین مقدار قبلی کمتر شد، وزن‌ها در best_model.pt ذخیره می‌شوند. دوم Early Stopping: اگر پنج اپوک پشت سر هم بهبودی نباشد، آموزش متوقف می‌شود. معیار هر دو loss اعتبارسنجی است نه دقت، چون loss حساس‌تر است. در اجرای نهایی توقف زودهنگام فعال نشد و بهترین مدل همان اپوک پانزدهم بود.</aside>
+</section>
